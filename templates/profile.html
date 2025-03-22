@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Profile</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .profile-info {
+            margin-top: 20px;
+        }
+        .profile-info p {
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Your Profile</h1>
+    <div class="profile-info">
+        <p><strong>Username:</strong> {{ user[1] }}</p> <!-- Assuming the username is the second column -->
+        <p><strong>Email:</strong> {{ user[3] }}</p> <!-- Assuming the email is the fourth column -->
+        <p><strong>Member Since:</strong> {{ user[4] }}</p> <!-- Assuming the registration date is the fifth column -->
+    </div>
+    <br>
+    <a href="{{ url_for('index') }}">Back to Home</a>
+</body>
+</html>

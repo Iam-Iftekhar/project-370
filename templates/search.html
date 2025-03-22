@@ -1,0 +1,10 @@
+<!-- search.html -->
+{% extends 'base.html' %}
+{% block title %}Search Anime{% endblock %}
+{% block content %}
+    <h2>Search Anime</h2>
+    <form method="POST">
+        <input type="text" name="query" placeholder="Search..." required class="form-control mb-2">
+        <button type="submit" class="btn btn-primary">Search</button>
+    </form>
+{% endblock %}

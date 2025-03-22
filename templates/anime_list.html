@@ -1,0 +1,13 @@
+<!-- anime_list.html -->
+{% extends 'base.html' %}
+{% block title %}Anime List{% endblock %}
+{% block content %}
+    <h2>Anime List</h2>
+    <ul class="list-group">
+        {% for anime in anime %}
+            <li class="list-group-item">
+                <a href="{{ url_for('anime_details', anime_id=anime[0]) }}">{{ anime[1] }}</a>
+            </li>
+        {% endfor %}
+    </ul>
+{% endblock %}

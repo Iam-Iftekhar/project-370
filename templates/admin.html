@@ -1,0 +1,15 @@
+<!-- admin.html -->
+{% extends 'base.html' %}
+{% block title %}Admin Panel{% endblock %}
+{% block content %}
+    <h2>Admin Panel - Add Anime</h2>
+    <form method="POST">
+        <input type="text" name="title" placeholder="Title" required class="form-control mb-2">
+        <input type="text" name="genre" placeholder="Genre" required class="form-control mb-2">
+        <input type="number" name="rating" placeholder="Rating" required class="form-control mb-2">
+        <textarea name="synopsis" placeholder="Synopsis" required class="form-control mb-2"></textarea>
+        <input type="number" name="episodes" placeholder="episodes" required class="form-control mb-2">
+        <input type="number" name="release_year" placeholder="Release Year" required class="form-control mb-2">
+        <button type="submit" class="btn btn-success">Add Anime</button>
+    </form>
+{% endblock %}

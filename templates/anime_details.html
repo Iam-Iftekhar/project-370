@@ -1,0 +1,15 @@
+<!-- anime_details.html -->
+{% extends 'base.html' %}
+{% block title %}Anime Details{% endblock %}
+{% block content %}
+    <h2>{{ anime[1] }}</h2>
+    <p><strong>Genre:</strong> {{ anime[2] }}</p>
+    <p><strong>Rating:</strong> {{ anime[3] }}</p>
+    <p><strong>Synopsis:</strong> {{ anime[4] }}</p>
+    <p><strong>Release Year:</strong> {{ anime[5] }}</p>
+    <p><strong>Episodes:</strong> {{ anime[6] }}</p>
+    <form method="POST" action="{{ url_for('rate', anime_id=anime[0]) }}">
+        <input type="number" name="rating" min="1" max="10" required>
+        <button type="submit" class="btn btn-warning">Rate</button>
+    </form>
+{% endblock %}
