@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Add New Anime</h2>
+<form method="POST">
+    <div class="form-group">
+        <label>ID</label>
+        <input type="text" name="id" required>
+    </div>
+    
+    <div class="form-group">
+        <label>Title</label>
+        <input type="text" name="title" required>
+    </div>
+    
+    <div class="form-group">
+        <label>Image URL</label>
+        <input type="text" name="image" required>
+    </div>
+    
+    <div class="form-group">
+        <label>Description</label>
+        <textarea name="description" rows="4"></textarea>
+    </div>
+    
+    <div class="form-group">
+        <label>Type</label>
+        <select name="type" required>
+            <option value="movie">Movie</option>
+            <option value="tv_series">TV Series</option>
+        </select>
+    </div>
+    
+    <div class="form-group checkbox">
+        <input type="checkbox" name="is_trending" id="trending">
+        <label for="trending">Trending</label>
+    </div>
+    
+    <div class="form-group checkbox">
+        <input type="checkbox" name="is_popular" id="popular">
+        <label for="popular">Popular</label>
+    </div>
+    
+    <div class="form-group checkbox">
+        <input type="checkbox" name="is_top_airing" id="top_airing">
+        <label for="top_airing">Top Airing</label>
+    </div>
+    
+    <button type="submit" class="btn">Add Anime</button>
+</form>
+{% endblock %}

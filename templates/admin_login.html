@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+
+{% block title %}Admin Login - An!meDB{% endblock %}
+
+{% block content %}
+<div class="login-container">
+    <div class="login-card">
+        <h1>Welcome, Admin!</h1>
+        <form method="POST" action="{{ url_for('admin_login') }}">
+            <div class="form-group">
+                <label for="username">USERNAME</label>
+                <input type="text" id="username" name="username" placeholder="admin_user" required>
+            </div>
+            <div class="form-group">
+                <label for="password">PASSWORD</label>
+                <input type="password" id="password" name="password" placeholder="Password" required>
+            </div>
+
+            <div class="options-row">
+                <div class="checkbox-group">
+                    <input type="checkbox" id="remember" name="remember">
+                    <label for="remember">Remember me</label>
+                </div>
+                <a href="#" class="forgot-password">Forgot password?</a>
+            </div>
+
+            <div class="captcha-box">
+                <div>
+                    <div class="captcha-brand">CLOUDFLARE</div>
+                    <div class="captcha-name">Entang + Tarma</div>
+                </div>
+                <div>Verify you are human</div>
+            </div>
+
+            <button type="submit" class="btn-login">Login</button>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="footer-links">
+                        {% for category, message in messages %}
+                            <p style="color: {% if category == 'success' %}green{% else %}red{% endif %};">{{ message }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            <div class="footer-links">
+                <span>Need user login instead?</span>
+                <div>
+                    <a href="{{ url_for('login') }}">Go to User Login</a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

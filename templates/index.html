@@ -1,7 +1,36 @@
-<!-- index.html -->
-{% extends 'base.html' %}
-{% block title %}Home{% endblock %}
+{% extends "base.html" %}
+
 {% block content %}
-    <h1>Welcome to AnimeDB</h1>
-    <a href="{{ url_for('anime_list') }}" class="btn btn-primary">Browse Anime</a>
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Anime Merchandise</h1>
+        <a href="{{ url_for('add_merchandise') }}" class="btn btn-primary">Sell Your Merch</a>
+    </div>
+    
+    <div class="row">
+        {% for item in items %}
+        <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+            <div class="card h-100">
+                <img src="{{ item.image_url or url_for('static', filename='images/merch-placeholder.jpg') }}" class="card-img-top" alt="{{ item.title }}">
+                <div class="card-body">
+                    <h5 class="card-title">{{ item.title }}</h5>
+                    <p class="card-text">{{ item.description|truncate(100) }}</p>
+                    <p class="text-muted">${{ "%.2f"|format(item.price) }}</p>
+                    <span class="badge badge-secondary">{{ item.category }}</span>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <form method="POST" action="{{ url_for('purchase_merchandise', item_id=item.id) }}">
+                        <button type="submit" class="btn btn-success btn-block">Buy Now</button>
+                    </form>
+                    <small class="text-muted">Sold by {{ item.username }}</small>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-12">
+            <div class="alert alert-info">No merchandise available at the moment.</div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
 {% endblock %}

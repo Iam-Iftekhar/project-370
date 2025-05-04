@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Movies{% endblock %}
+
+{% block content %}
+<section class="anime-list">
+    <h2>Anime Movies</h2>
+    <div class="anime-grid">
+        {% for movie in movies %}
+        <a href="{{ url_for('anime_detail', anime_id=movie.id) }}" class="anime-card">
+            <div class="anime-image">
+                <img src="{{ movie.image }}" alt="{{ movie.title }}">
+            </div>
+            <div class="movie-title">{{movie.title}}</div>
+        </a>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}
