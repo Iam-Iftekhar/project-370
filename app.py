@@ -334,7 +334,7 @@ def search():
                          results=results, 
                          query=query)
 
-@app.route('/anime/<int:anime_id>')  # Changed to int for consistency
+@app.route('/anime/<int:anime_id>')
 def anime_detail(anime_id):
     anime = get_db_data("SELECT * FROM anime WHERE id = %s", (anime_id,))
     if not anime:
@@ -374,6 +374,81 @@ def event_detail(event_id):
     return render_template('event_detail.html', event=event[0])
 
 
+
+
+####manga section####
+
+
+@app.route('/manga')
+def manga_list():
+    cur = mysql.connection.cursor()
+    
+    query = """
+        SELECT 
+            anime.id AS anime_id,
+            anime.title AS anime_title,
+            anime.image AS anime_image,
+            manga.id AS manga_id,
+            manga.title AS manga_title
+        FROM anime
+        LEFT JOIN manga ON manga.anime_id = anime.id
+        ORDER BY anime.title
+    """
+    cur.execute(query)
+    results = cur.fetchall()
+    cur.close()
+
+    anime_dict = {}
+    for row in results:
+        anime_id = row[0]
+        if anime_id not in anime_dict:
+            anime_dict[anime_id] = {
+                'id': anime_id,
+                'title': row[1],
+                'image': row[2],
+                'mangas': []
+            }
+        
+        # Add manga if it exists
+        if row[3]:  # manga_id exists
+            anime_dict[anime_id]['mangas'].append({
+                'id': row[3],
+                'title': row[4]
+            })
+
+    # Convert to list for template
+    anime_list = list(anime_dict.values())
+
+    return render_template('manga_list.html', anime_list=anime_list)
+
+@app.route('/manga/<int:anime_id>')
+def manga_page(anime_id):
+    cur = mysql.connection.cursor()
+
+    # Fetch anime title
+    cur.execute("SELECT title FROM anime WHERE id = %s", (anime_id,))
+    anime = cur.fetchone()
+
+    # Check if anime exists
+    if not anime:
+        return "Anime not found", 404
+
+    # Fetch all manga entries linked to this anime
+    cur.execute("SELECT title FROM manga WHERE anime_id = %s", (anime_id,))
+    mangas = cur.fetchall()
+    cur.close()
+
+    return render_template('manga_page.html', anime={'id': anime_id, 'title': anime[0]}, mangas=mangas)
+
+
+
+
+
+
+
+
+
+####merchandise section####
 
 
 
