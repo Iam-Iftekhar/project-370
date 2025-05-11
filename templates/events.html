@@ -1,48 +1,144 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
 
 {% block content %}
-<div class="container">
-    <h1 class="my-4">Anime Events</h1>
+<div class="events-container">
+    <h1 class="events-title">Upcoming Events</h1>
     
-    <h2 class="my-3">Upcoming Events</h2>
-    <div class="row">
-        {% for event in upcoming_events %}
-        <div class="col-md-4 mb-4">
-            <div class="card h-100">
-                <img src="{{ event.image_url or url_for('static', filename='images/event-placeholder.jpg') }}" class="card-img-top" alt="{{ event.title }}">
-                <div class="card-body">
-                    <h5 class="card-title">{{ event.title }}</h5>
-                    <p class="card-text">{{ event.description|truncate(100) }}</p>
-                    <p class="text-muted">{{ event.event_date.strftime('%B %d, %Y') }} • {{ event.location }}</p>
-                </div>
-                <div class="card-footer">
-                    <a href="{{ url_for('event_detail', event_id=event.id) }}" class="btn btn-primary">Details</a>
-                </div>
+    {% if events %}
+    <div class="events-grid">
+        {% for event in events %}
+        <div class="event-card">
+            <div class="event-image">
+                <img src="{{ url_for('static', filename='uploads/events/' + event.image_path) }}" alt="{{ event.title }}">
             </div>
-        </div>
-        {% else %}
-        <div class="col-12">
-            <p>No upcoming events scheduled.</p>
-        </div>
-        {% endfor %}
-    </div>
-
-    <h2 class="my-3">Past Events</h2>
-    <div class="row">
-        {% for event in past_events %}
-        <div class="col-md-3 mb-4">
-            <div class="card h-100">
-                <img src="{{ event.image_url or url_for('static', filename='images/event-placeholder.jpg') }}" class="card-img-top" alt="{{ event.title }}">
-                <div class="card-body">
-                    <h5 class="card-title">{{ event.title }}</h5>
-                    <p class="text-muted">{{ event.event_date.strftime('%b %Y') }}</p>
+            <div class="event-content">
+                <h3>{{ event.title }}</h3>
+                <div class="event-meta">
+                    <span><i class="fas fa-calendar-alt"></i> {{ event.date.strftime('%B %d, %Y') }}</span>
+                    <span><i class="fas fa-map-marker-alt"></i> {{ event.location }}</span>
                 </div>
-                <div class="card-footer">
-                    <a href="{{ url_for('event_detail', event_id=event.id) }}" class="btn btn-sm btn-outline-secondary">View</a>
-                </div>
+                <p class="event-description">{{ event.description[:150] }}...</p>
+                <a href="{{ url_for('events', event_id=event.id) }}" class="btn-details">
+                    View Details <i class="fas fa-arrow-right"></i>
+                </a>
             </div>
         </div>
         {% endfor %}
     </div>
+    {% else %}
+    <div class="no-events">
+        <i class="fas fa-calendar-times"></i>
+        <p>No upcoming events scheduled</p>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}
+
+<style>
+.events-container {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+.events-title {
+    text-align: center;
+    margin-bottom: 2rem;
+    color: #2c3e50;
+}
+
+.events-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 2rem;
+}
+
+.event-card {
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.event-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+}
+
+.event-image {
+    height: 200px;
+    overflow: hidden;
+}
+
+.event-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+}
+
+.event-card:hover .event-image img {
+    transform: scale(1.05);
+}
+
+.event-content {
+    padding: 1.5rem;
+}
+
+.event-content h3 {
+    margin-top: 0;
+    color: #2c3e50;
+}
+
+.event-meta {
+    display: flex;
+    gap: 1rem;
+    margin: 0.5rem 0;
+    color: #7f8c8d;
+    font-size: 0.9rem;
+}
+
+.event-meta i {
+    margin-right: 0.3rem;
+}
+
+.event-description {
+    color: #34495e;
+    margin: 1rem 0;
+}
+
+.btn-details {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: #3498db;
+    color: white;
+    border-radius: 5px;
+    text-decoration: none;
+    transition: background 0.3s ease;
+}
+
+.btn-details:hover {
+    background: #2980b9;
+}
+
+.no-events {
+    text-align: center;
+    padding: 3rem;
+    color: #7f8c8d;
+}
+
+.no-events i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    color: #bdc3c7;
+}
+
+@media (max-width: 768px) {
+    .events-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
