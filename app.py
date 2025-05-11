@@ -2,7 +2,12 @@ from flask import Flask, render_template, request, redirect, url_for, flash, ses
 from flask_bcrypt import Bcrypt
 from flask_login import LoginManager, login_user, logout_user, login_required, UserMixin, current_user
 from flask_mysqldb import MySQL
+from datetime import datetime
+from datetime import date
 from werkzeug.utils import secure_filename
+from MySQLdb.cursors import DictCursor
+
+# from flask_wtf.csrf import CSRFProtect
 import os
 from dotenv import load_dotenv
 from flask import jsonify
@@ -306,6 +311,85 @@ def logout():
     flash('You have been logged out.', 'info')
     return redirect(url_for('login'))
 
+
+
+###watchlist###
+
+
+# Add to watchlist
+@app.route('/add_to_watchlist', methods=['POST'])
+@login_required
+def add_to_watchlist():
+    if 'anime_id' not in request.form:
+        flash('Invalid request', 'error')
+        return redirect(request.referrer or url_for('home'))
+    
+    anime_id = request.form['anime_id']
+    cur = mysql.connection.cursor()
+    
+    try:
+        # Check if already in watchlist first
+        cur.execute("SELECT 1 FROM watchlist WHERE user_id = %s AND anime_id = %s", 
+                   (current_user.id, anime_id))
+        if cur.fetchone():
+            flash('This anime is already in your watchlist', 'info')
+        else:
+            # Add to watchlist if not already there
+            cur.execute("INSERT INTO watchlist (user_id, anime_id) VALUES (%s, %s)", 
+                       (current_user.id, anime_id))
+            mysql.connection.commit()
+            flash('Added to watchlist!', 'success')
+            
+    except Exception as e:
+        mysql.connection.rollback()
+        flash('Error updating your watchlist', 'error')
+        print(f"Database error: {e}")
+    finally:
+        cur.close()
+    
+    return redirect(request.referrer or url_for('home'))
+
+@app.route('/watchlist')
+@login_required
+def watchlist():
+    cur = mysql.connection.cursor()
+    try:
+        cur.execute("""
+            SELECT a.id, a.title, a.image 
+            FROM anime a
+            JOIN watchlist w ON a.id = w.anime_id
+            WHERE w.user_id = %s
+            ORDER BY a.title
+        """, (current_user.id,))
+        watchlist_items = cur.fetchall()
+        
+        if not watchlist_items:
+            flash('Your watchlist is empty', 'info')
+            
+    except Exception as e:
+        flash('Error loading your watchlist', 'error')
+        print(f"Database error: {e}")
+        watchlist_items = []
+    finally:
+        cur.close()
+    
+    return render_template('watchlist.html', watchlist=watchlist_items)
+
+
+# Remove from watchlist
+@app.route('/remove_from_watchlist/<anime_id>', methods=['POST'])
+@login_required
+def remove_from_watchlist(anime_id):
+    cur = mysql.connection.cursor()
+    cur.execute("DELETE FROM watchlist WHERE user_id = %s AND anime_id = %s", 
+               (current_user.id, anime_id))
+    mysql.connection.commit()
+    cur.close()
+    
+    flash('Removed from watchlist', 'success')
+    return redirect(url_for('watchlist'))
+
+
 @app.route('/tv-series')
 def tv_series():
     series = get_db_data("SELECT * FROM anime WHERE type = 'tv_series'")
@@ -357,21 +441,21 @@ def anime_detail(anime_id):
 
 # Admin Panel (Add/Edit/Delete Anime)
 
-@app.route('/events')
-def events():
-    upcoming_events = get_db_data("SELECT * FROM anime_events WHERE event_date >= CURDATE() ORDER BY event_date")
-    past_events = get_db_data("SELECT * FROM anime_events WHERE event_date < CURDATE() ORDER BY event_date DESC")
-    return render_template('events/events.html', 
-                         upcoming_events=upcoming_events,
-                         past_events=past_events)
+# @app.route('/events')
+# def events():
+#     upcoming_events = get_db_data("SELECT * FROM anime_events WHERE event_date >= CURDATE() ORDER BY event_date")
+#     past_events = get_db_data("SELECT * FROM anime_events WHERE event_date < CURDATE() ORDER BY event_date DESC")
+#     return render_template('events/events.html', 
+#                          upcoming_events=upcoming_events,
+#                          past_events=past_events)
 
-@app.route('/event/<int:event_id>')
-def event_detail(event_id):
-    event = get_db_data("SELECT * FROM anime_events WHERE id = %s", (event_id,))
-    if not event:
-        flash('Event not found', 'danger')
-        return redirect(url_for('events'))
-    return render_template('event_detail.html', event=event[0])
+# @app.route('/event/<int:event_id>')
+# def event_detail(event_id):
+#     event = get_db_data("SELECT * FROM anime_events WHERE id = %s", (event_id,))
+#     if not event:
+#         flash('Event not found', 'danger')
+#         return redirect(url_for('events'))
+#     return render_template('event_detail.html', event=event[0])
 
 
 
@@ -381,64 +465,133 @@ def event_detail(event_id):
 
 @app.route('/manga')
 def manga_list():
-    cur = mysql.connection.cursor()
+    cur = mysql.connection.cursor(DictCursor)
     
     query = """
         SELECT 
-            anime.id AS anime_id,
-            anime.title AS anime_title,
-            anime.image AS anime_image,
-            manga.id AS manga_id,
-            manga.title AS manga_title
-        FROM anime
-        LEFT JOIN manga ON manga.anime_id = anime.id
-        ORDER BY anime.title
+            m.id,
+            m.title,
+            m.cover_image,
+            m.description,
+            m.genre,
+            m.status,
+            m.chapters,
+            m.anime_id,
+            a.title AS anime_title
+        FROM manga m
+        LEFT JOIN anime a ON m.anime_id = a.id
+        ORDER BY m.title
     """
     cur.execute(query)
     results = cur.fetchall()
     cur.close()
 
-    anime_dict = {}
+    manga_data = []
     for row in results:
-        anime_id = row[0]
-        if anime_id not in anime_dict:
-            anime_dict[anime_id] = {
-                'id': anime_id,
-                'title': row[1],
-                'image': row[2],
-                'mangas': []
+        # Handle NULL values with defaults
+        anime_data = None
+        if row['anime_id'] is not None:  # Explicit None check
+            anime_data = {
+                'id': row['anime_id'],
+                'title': row['anime_title'] or "Untitled Anime"  # Fallback if title is None
             }
         
-        # Add manga if it exists
-        if row[3]:  # manga_id exists
-            anime_dict[anime_id]['mangas'].append({
-                'id': row[3],
-                'title': row[4]
-            })
+        manga_entry = {
+            'id': row['id'],
+            'title': row['title'],
+            'cover_image': row['cover_image'] or "/static/images/default_cover.jpg",  # Fallback image
+            'description': row['description'] or "No description available",
+            'genre': row['genre'] or "Genre not specified",
+            'status': row['status'] or "unknown",
+            'chapters': row['chapters'] or 0,
+            'anime': anime_data  # This will be None if no anime_id
+        }
+        manga_data.append(manga_entry)
 
-    # Convert to list for template
-    anime_list = list(anime_dict.values())
+    return render_template('manga_list.html', mangas=manga_data)
 
-    return render_template('manga_list.html', anime_list=anime_list)
-
-@app.route('/manga/<int:anime_id>')
-def manga_page(anime_id):
+@app.route('/manga/<int:manga_id>')
+def manga_page(manga_id):
     cur = mysql.connection.cursor()
 
-    # Fetch anime title
-    cur.execute("SELECT title FROM anime WHERE id = %s", (anime_id,))
-    anime = cur.fetchone()
-
-    # Check if anime exists
-    if not anime:
-        return "Anime not found", 404
-
-    # Fetch all manga entries linked to this anime
-    cur.execute("SELECT title FROM manga WHERE anime_id = %s", (anime_id,))
-    mangas = cur.fetchall()
+    # Fetch complete manga details
+    query = """
+        SELECT 
+            m.id,
+            m.title,
+            m.cover_image,
+            m.description,
+            m.genre,
+            m.status,
+            m.chapters,
+            m.created_at,
+            m.anime_id,
+            a.title AS anime_title,
+            a.image AS anime_image
+        FROM manga m
+        LEFT JOIN anime a ON m.anime_id = a.id
+        WHERE m.id = %s
+    """
+    cur.execute(query, (manga_id,))
+    manga = cur.fetchone()
     cur.close()
 
-    return render_template('manga_page.html', anime={'id': anime_id, 'title': anime[0]}, mangas=mangas)
+    if not manga:
+        return "Manga not found", 404
+
+    # Prepare detailed manga data
+    manga_details = {
+        'id': manga[0],
+        'title': manga[1],
+        'cover_image': manga[2],
+        'description': manga[3],
+        'genre': manga[4],
+        'status': manga[5],
+        'chapters': manga[6],
+        'created_at': manga[7],
+        'anime': {
+            'id': manga[8],
+            'title': manga[9],
+            'image': manga[10]
+        } if manga[8] else None
+    }
+
+    return render_template('manga_page.html', manga=manga_details)
+
+    # Fetch manga details with associated anime info
+    query = """
+        SELECT 
+            manga.id,
+            manga.title,
+            manga.image,
+            manga.description,
+            anime.id AS anime_id,
+            anime.title AS anime_title
+        FROM manga
+        LEFT JOIN anime ON manga.anime_id = anime.id
+        WHERE manga.id = %s
+    """
+    cur.execute(query, (manga_id,))
+    manga = cur.fetchone()
+    cur.close()
+
+    # Check if manga exists
+    if not manga:
+        return "Manga not found", 404
+
+    # Prepare data for template
+    manga_data = {
+        'id': manga[0],
+        'title': manga[1],
+        'image': manga[2],
+        'description': manga[3],
+        'anime': {
+            'id': manga[4],
+            'title': manga[5]
+        } if manga[4] else None
+    }
+
+    return render_template('manga_page.html', manga=manga_data)
 
 
 
@@ -550,6 +703,12 @@ def admin_logout():
     session.pop('admin_logged_in', None)
     return redirect(url_for('home'))
 
+
+@app.route('/admin/dashboard')
+def admin_dashboard():
+    return render_template('admin_dashboard.html')
+
+
 @app.route('/admin/anime')
 def anime_list():
     if not session.get('admin_logged_in'):
@@ -621,6 +780,77 @@ def initialize_database():
     if cur.fetchone()['count'] > 0:
         cur.close()
         return
+    
+
+
+
+
+@app.route('/admin/events/create', methods=['GET', 'POST'])
+@login_required
+def create_event():
+    
+    if request.method == 'POST':
+        title = request.form.get('title')
+        description = request.form.get('description')
+        date = request.form.get('date')
+        location = request.form.get('location')
+        
+        # Handle file upload
+        if 'image' not in request.files:
+            flash('No image uploaded', 'error')
+            return redirect(request.url)
+        
+        file = request.files['image']
+        if file.filename == '':
+            flash('No selected file', 'error')
+            return redirect(request.url)
+        
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(filepath)
+            
+            # Save to database
+            cur = mysql.connection.cursor()
+            cur.execute("""
+                INSERT INTO anime_events (title, description, image_url, event_date, location, created_at)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, (title, description, filename, date, location, datetime.now()))
+            mysql.connection.commit()
+            cur.close()
+            
+            flash('Event created successfully!', 'success')
+            return redirect(url_for('admin_dashboard'))
+        
+    return render_template('create_event.html')
+
+@app.route('/events')
+def events():
+    cur = mysql.connection.cursor()
+    cur.execute("""
+        SELECT id, title, description, image_url, event_date, location
+        FROM anime_events
+        WHERE event_date >= %s
+        ORDER BY event_date ASC
+    """, (date.today(),))
+
+    rows = cur.fetchall()
+    cur.close()
+
+    events = []
+    for row in rows:
+        events.append({
+            'id': row['id'],
+            'title': row['title'],
+            'description': row['description'],
+            'image_path': row['image_url'],
+            'date': row['event_date'],
+            'location': row['location'],
+        })
+
+    return render_template("events/events.html", events=events)
+
+
     
     # Insert sample data
     # anime_data = [
