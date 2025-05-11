@@ -1,29 +1,528 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>User Profile</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-        }
-        .profile-info {
-            margin-top: 20px;
-        }
-        .profile-info p {
-            font-size: 18px;
-        }
-    </style>
-</head>
-<body>
-    <h1>Your Profile</h1>
-    <div class="profile-info">
-        <p><strong>Username:</strong> {{ user[1] }}</p> <!-- Assuming the username is the second column -->
-        <p><strong>Email:</strong> {{ user[3] }}</p> <!-- Assuming the email is the fourth column -->
-        <p><strong>Member Since:</strong> {{ user[4] }}</p> <!-- Assuming the registration date is the fifth column -->
+<div class="profile-container">
+    <div class="profile-sidebar">
+        <div class="profile-card">
+            <div class="avatar-container">
+                <img class="profile-avatar" src="{% if current_user.avatar %}{{ url_for('static', filename='uploads/' + current_user.avatar) }}{% else %}{{ url_for('static', filename='images/default-avatar.jpg') }}{% endif %}" alt="Avatar">
+                <div class="avatar-hover">
+                    <i class="fas fa-camera"></i>
+                </div>
+            </div>
+            <h2 class="profile-username">{{ current_user.username }}</h2>
+            <p class="profile-email">{{ current_user.email }}</p>
+            
+            <div class="profile-stats">
+                <div class="stat-item">
+                    <span class="stat-number">{{ watchlist_count }}</span>
+                    <span class="stat-label">Watchlist</span>
+                    <div class="stat-icon">
+                        <i class="fas fa-bookmark"></i>
+                    </div>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">{{ recent_anime|length }}</span>
+                    <span class="stat-label">Recently Viewed</span>
+                    <div class="stat-icon">
+                        <i class="fas fa-history"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <a href="{{ url_for('logout') }}" class="logout-btn">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </a>
+        </div>
+        
+        <div class="profile-menu">
+            <a href="{{ url_for('profile') }}" class="menu-item active">
+                <div class="menu-icon">
+                    <i class="fas fa-user"></i>
+                </div>
+                <span>Profile</span>
+            </a>
+            <a href="{{ url_for('watchlist') }}" class="menu-item">
+                <div class="menu-icon">
+                    <i class="fas fa-bookmark"></i>
+                </div>
+                <span>Watchlist</span>
+            </a>
+        </div>
     </div>
-    <br>
-    <a href="{{ url_for('index') }}">Back to Home</a>
-</body>
-</html>
+    
+    <div class="profile-content">
+        <div class="profile-header">
+            <h1 class="profile-title">My Profile</h1>
+            <div class="profile-actions">
+                <a href="{{ url_for('edit_profile') }}" class="btn-edit">
+                    <i class="fas fa-pencil-alt"></i> Edit Profile
+                </a>
+            </div>
+        </div>
+        
+        <div class="profile-section">
+            <div class="section-header">
+                <i class="fas fa-history section-icon"></i>
+                <h2>Recently Watched</h2>
+            </div>
+            
+            {% if recent_anime %}
+                <div class="anime-grid">
+                    {% for anime in recent_anime %}
+                    <div class="anime-card">
+                        <a href="{{ url_for('anime_detail', anime_id=anime.id) }}" class="anime-link">
+                            <div class="anime-thumbnail">
+                                <img src="{{ anime.image }}" alt="{{ anime.title }}" class="anime-img">
+                                <div class="progress-container">
+                                    <div class="progress-bar" style="width: {{ anime.progress }}%"></div>
+                                </div>
+                                <div class="anime-overlay">
+                                    <i class="fas fa-play"></i>
+                                </div>
+                            </div>
+                            <h3 class="anime-title">{{ anime.title }}</h3>
+                        </a>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-tv empty-icon"></i>
+                    <p class="empty-message">No recently watched anime yet</p>
+                    <a href="{{ url_for('tv_series') }}" class="btn-discover">
+                        <i class="fas fa-compass"></i> Discover Anime
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+/* Base Styles */
+:root {
+    --primary: #4361ee;
+    --secondary: #3f37c9;
+    --accent: #4895ef;
+    --dark: #1a1a2e;
+    --light: #f8f9fa;
+    --success: #4cc9f0;
+    --danger: #f72585;
+    --warning: #f8961e;
+    --info: #43aa8b;
+}
+
+.profile-container {
+    display: flex;
+    min-height: 100vh;
+    background-color: #f5f7fa;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Sidebar Styles */
+.profile-sidebar {
+    width: 300px;
+    background: white;
+    box-shadow: 0 0 20px rgba(0,0,0,0.1);
+    padding: 2rem 1.5rem;
+    position: relative;
+    z-index: 10;
+}
+
+.profile-card {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.avatar-container {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    margin: 0 auto 1.5rem;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 4px solid white;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+}
+
+.avatar-container:hover {
+    transform: scale(1.05);
+}
+
+.avatar-container:hover .avatar-hover {
+    opacity: 1;
+}
+
+.avatar-hover {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(67, 97, 238, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    color: white;
+    font-size: 1.5rem;
+}
+
+.profile-avatar {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.profile-username {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: 0.5rem;
+}
+
+.profile-email {
+    color: #6c757d;
+    font-size: 0.9rem;
+    margin-bottom: 1.5rem;
+}
+
+.profile-stats {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-item {
+    position: relative;
+    text-align: center;
+    padding: 1rem;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    min-width: 90px;
+    transition: all 0.3s ease;
+}
+
+.stat-item:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 15px rgba(0,0,0,0.1);
+}
+
+.stat-number {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.stat-label {
+    display: block;
+    font-size: 0.8rem;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 0.3rem;
+}
+
+.stat-icon {
+    position: absolute;
+    top: -15px;
+    right: -10px;
+    background: var(--accent);
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 0.8rem;
+    box-shadow: 0 3px 5px rgba(0,0,0,0.2);
+}
+
+.logout-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 0.6rem 1.5rem;
+    background: white;
+    color: var(--danger);
+    border: 1px solid var(--danger);
+    border-radius: 30px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    margin-top: 1rem;
+}
+
+.logout-btn:hover {
+    background: var(--danger);
+    color: white;
+    transform: translateY(-2px);
+}
+
+.profile-menu {
+    margin-top: 2rem;
+}
+
+.menu-item {
+    display: flex;
+    align-items: center;
+    padding: 0.8rem 1rem;
+    margin-bottom: 0.5rem;
+    border-radius: 8px;
+    color: #495057;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.menu-item:hover {
+    background: rgba(67, 97, 238, 0.1);
+    color: var(--primary);
+}
+
+.menu-item.active {
+    background: var(--primary);
+    color: white;
+}
+
+.menu-icon {
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 1rem;
+    font-size: 1rem;
+}
+
+/* Content Styles */
+.profile-content {
+    flex: 1;
+    padding: 2rem 3rem;
+    background-color: #f8f9fa;
+}
+
+.profile-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.profile-title {
+    font-size: 2rem;
+    color: var(--dark);
+    font-weight: 700;
+    margin: 0;
+}
+
+.btn-edit {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0.6rem 1.2rem;
+    background: white;
+    color: var(--primary);
+    border: 1px solid var(--primary);
+    border-radius: 6px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.btn-edit:hover {
+    background: var(--primary);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(67, 97, 238, 0.2);
+}
+
+.profile-section {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem 2rem;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.03);
+    margin-bottom: 2rem;
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.section-icon {
+    color: var(--accent);
+    font-size: 1.2rem;
+    margin-right: 0.8rem;
+}
+
+.section-header h2 {
+    font-size: 1.3rem;
+    color: var(--dark);
+    margin: 0;
+    font-weight: 600;
+}
+
+/* Anime Grid */
+.anime-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 1.5rem;
+}
+
+.anime-card {
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.anime-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+}
+
+.anime-link {
+    text-decoration: none;
+    color: inherit;
+}
+
+.anime-thumbnail {
+    position: relative;
+    height: 220px;
+    overflow: hidden;
+    border-radius: 8px;
+}
+
+.anime-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+}
+
+.anime-card:hover .anime-img {
+    transform: scale(1.05);
+}
+
+.progress-container {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: rgba(0,0,0,0.1);
+}
+
+.progress-bar {
+    height: 100%;
+    background: var(--success);
+    transition: width 0.5s ease;
+}
+
+.anime-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    color: white;
+    font-size: 2rem;
+}
+
+.anime-card:hover .anime-overlay {
+    opacity: 1;
+}
+
+.anime-title {
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin: 0.8rem 0 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--dark);
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 3rem 0;
+}
+
+.empty-icon {
+    font-size: 3rem;
+    color: #adb5bd;
+    margin-bottom: 1rem;
+}
+
+.empty-message {
+    color: #6c757d;
+    margin-bottom: 1.5rem;
+}
+
+.btn-discover {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0.7rem 1.5rem;
+    background: var(--primary);
+    color: white;
+    border-radius: 30px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    box-shadow: 0 4px 10px rgba(67, 97, 238, 0.3);
+}
+
+.btn-discover:hover {
+    background: var(--secondary);
+    transform: translateY(-2px);
+    box-shadow: 0 7px 15px rgba(67, 97, 238, 0.4);
+}
+
+/* Responsive Design */
+@media (max-width: 992px) {
+    .profile-container {
+        flex-direction: column;
+    }
+    
+    .profile-sidebar {
+        width: 100%;
+        padding: 1.5rem;
+    }
+    
+    .profile-content {
+        padding: 1.5rem;
+    }
+    
+    .anime-grid {
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    }
+}
+
+@media (max-width: 576px) {
+    .profile-stats {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .anime-grid {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 1rem;
+    }
+}
+</style>
