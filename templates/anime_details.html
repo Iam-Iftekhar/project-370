@@ -1,15 +1,399 @@
-<!-- anime_details.html -->
 {% extends 'base.html' %}
-{% block title %}Anime Details{% endblock %}
+
+{% block title %}{{ anime.title }} - HiAnime Clone{% endblock %}
+
 {% block content %}
-    <h2>{{ anime[1] }}</h2>
-    <p><strong>Genre:</strong> {{ anime[2] }}</p>
-    <p><strong>Rating:</strong> {{ anime[3] }}</p>
-    <p><strong>Synopsis:</strong> {{ anime[4] }}</p>
-    <p><strong>Release Year:</strong> {{ anime[5] }}</p>
-    <p><strong>Episodes:</strong> {{ anime[6] }}</p>
-    <form method="POST" action="{{ url_for('rate', anime_id=anime[0]) }}">
-        <input type="number" name="rating" min="1" max="10" required>
-        <button type="submit" class="btn btn-warning">Rate</button>
-    </form>
+<div class="anime-detail-container">
+    <div class="anime-header">
+        <div class="anime-cover-container">
+            <img src="{{ anime.image }}" alt="{{ anime.title }}" class="anime-cover-img">
+        </div>
+        
+        <div class="anime-info">
+            <h1 class="anime-title">{{ anime.title }}</h1>
+            
+            <div class="anime-meta">
+                <span class="badge anime-type">{{ anime.type }}</span>
+                <span class="badge anime-year">{{ anime.year }}</span>
+                <span class="badge anime-status">{{ anime.status }}</span>
+            </div>
+            
+            <div class="anime-description">
+                <p>{{ anime.description }}</p>
+            </div>
+            
+            <div class="anime-actions">
+                {% if anime.links %}
+                <a href="{{ anime.links }}" class="btn btn-primary watch-button" target="_blank">
+                    <i class="fas fa-play"></i> Watch Now
+                </a>
+                {% else %}
+                <button class="btn btn-secondary watch-button" disabled>
+                    <i class="fas fa-play"></i> Not Available
+                </button>
+                {% endif %}
+                
+                {% if current_user.is_authenticated %}
+                    {% if anime.id in current_user.watchlist_ids %}
+                    <button class="btn btn-success watchlist-button" 
+                            onclick="removeFromWatchlist('{{ anime.id }}')">
+                        <i class="fas fa-check"></i> In Watchlist
+                    </button>
+                    {% else %}
+                    <form method="POST" action="{{ url_for('add_to_watchlist') }}">
+                        <input type="hidden" name="anime_id" value="{{ anime.id }}">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Add to Watchlist
+                        </button>
+                    </form>
+                    {% endif %}
+                {% else %}
+                    <a href="{{ url_for('login', next=request.path) }}" class="btn btn-outline-primary">
+                        <i class="fas fa-sign-in-alt"></i> Login to Add
+                    </a>
+                {% endif %}
+            </div>
+            
+            <div class="anime-details-grid">
+                <div class="detail-item">
+                    <span class="detail-label"><i class="fas fa-star"></i> Rating:</span>
+                    <span class="detail-value">{{ anime.rating }}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label"><i class="fas fa-list-ol"></i> Episodes:</span>
+                    <span class="detail-value">{{ anime.episodes }}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label"><i class="fas fa-tags"></i> Genre:</span>
+                    <span class="detail-value">{{ anime.genre }}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label"><i class="fas fa-building"></i> Studio:</span>
+                    <span class="detail-value">{{ anime.studio }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="anime-episodes-section">
+        <h2 class="section-title"><i class="fas fa-play-circle"></i> Episodes</h2>
+        <div class="episodes-grid">
+            {% if anime.episodes and anime.episodes > 0 %}
+                {% for episode in range(1, anime.episodes + 1) %}
+                <div class="episode-card">
+                    <div class="episode-number">Episode {{ episode }}</div>
+                    {% if anime.links %}
+                    <a href="{{ anime.links }}?episode={{ episode }}" class="btn btn-sm episode-watch-btn" target="_blank">
+                        Watch
+                    </a>
+                    {% else %}
+                    <button class="btn btn-sm episode-watch-btn" disabled>
+                        Watch
+                    </button>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="no-episodes">
+                    <i class="fas fa-info-circle"></i> No episodes available yet
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    {% if related_anime %}
+    <div class="related-anime-section">
+        <h2 class="section-title"><i class="fas fa-thumbs-up"></i> You Might Also Like</h2>
+        <div class="related-anime-grid">
+            {% for related in related_anime %}
+            <a href="{{ url_for('anime_detail', anime_id=related.id) }}" class="related-anime-card">
+                <div class="related-anime-image">
+                    <img src="{{ related.image }}" alt="{{ related.title }}">
+                    <div class="rating-badge">
+                        <i class="fas fa-star"></i> {{ related.rating }}
+                    </div>
+                </div>
+                <h3 class="related-anime-title">{{ related.title }}</h3>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+/* Main Container */
+.anime-detail-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Header Section */
+.anime-header {
+    display: flex;
+    gap: 30px;
+    margin-bottom: 40px;
+}
+
+.anime-cover-container {
+    flex: 0 0 300px;
+    height: 425px;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.anime-cover-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.anime-cover-container:hover .anime-cover-img {
+    transform: scale(1.03);
+}
+
+.anime-info {
+    flex: 1;
+}
+
+.anime-title {
+    font-size: 2rem;
+    margin-bottom: 15px;
+    color: white;
+}
+
+.anime-meta {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.badge {
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.anime-type { background-color: #3498db; color: white; }
+.anime-year { background-color: #2ecc71; color: white; }
+.anime-status { background-color: #e74c3c; color: white; }
+
+.anime-description {
+    line-height: 1.6;
+    margin-bottom: 25px;
+    color: #555;
+}
+
+/* Action Buttons */
+.anime-actions {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+.watch-button, .watchlist-button {
+    padding: 10px 20px;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Details Grid */
+.anime-details-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 15px;
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+}
+
+.detail-item {
+    display: flex;
+    justify-content: space-between;
+}
+
+.detail-label {
+    font-weight: 600;
+    color: #555;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.detail-value {
+    font-weight: 500;
+}
+
+/* Episodes Section */
+.anime-episodes-section {
+    margin-bottom: 40px;
+}
+
+.section-title {
+    font-size: 1.5rem;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #333;
+}
+
+.episodes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 15px;
+}
+
+.episode-card {
+    background: #f8f9fa;
+    border-radius: 6px;
+    padding: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.2s ease;
+}
+
+.episode-card:hover {
+    background: #e9ecef;
+    transform: translateY(-3px);
+}
+
+.episode-number {
+    font-weight: 500;
+}
+
+.episode-watch-btn {
+    padding: 5px 12px;
+    color: #6c757d;
+}
+
+.no-episodes {
+    padding: 20px;
+    text-align: center;
+    color: #6c757d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+/* Related Anime Section */
+.related-anime-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 20px;
+}
+
+.related-anime-card {
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.3s ease;
+}
+
+.related-anime-card:hover {
+    transform: translateY(-5px);
+}
+
+.related-anime-image {
+    position: relative;
+    height: 250px;
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 10px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.related-anime-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.rating-badge {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    background: rgba(0,0,0,0.7);
+    color: white;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+}
+
+.related-anime-title {
+    font-size: 1rem;
+    font-weight: 500;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .anime-header {
+        flex-direction: column;
+    }
+    
+    .anime-cover-container {
+        width: 100%;
+        height: auto;
+        aspect-ratio: 2/3;
+        margin-bottom: 20px;
+    }
+    
+    .anime-actions {
+        flex-direction: column;
+    }
+    
+    .episodes-grid {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    }
+    
+    .related-anime-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    }
+}
+</style>
+
+<script>
+// Watchlist functions
+function addToWatchlist(animeId) {
+    fetch('/add_to_watchlist', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ anime_id: animeId })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload(); // Refresh to update button state
+        }
+    });
+}
+
+function removeFromWatchlist(animeId) {
+    fetch('/remove_from_watchlist/' + animeId, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload(); // Refresh to update button state
+        }
+    });
+}
+</script>
 {% endblock %}
