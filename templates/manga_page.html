@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ anime.title }} - Manga - An!meDB{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Manga(s) for {{ anime.title }}</h1>
+    <ul>
+        {% for manga in mangas %}
+            <li>{{ manga.title }}</li>
+        {% else %}
+            <li>No manga found for this anime.</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endblock %}
